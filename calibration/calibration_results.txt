@@ -1,0 +1,53 @@
+Resolution: (1280, 720)
+Valid images: 40
+RMS error: 0.879900 px
+
+Camera matrix:
+[[630.25161376   0.         647.8566738 ]
+ [  0.         636.11450324 317.35452291]
+ [  0.           0.           1.        ]]
+
+Distortion coefficients:
+[-2.96694478e-01  8.72358719e-02  5.08147498e-05  7.73945323e-04
+ -1.15731413e-02]
+
+frame_001.png: 0.583626 px
+frame_005.png: 0.862609 px
+frame_006.png: 0.810839 px
+frame_007.png: 1.131248 px
+frame_009.png: 0.849415 px
+frame_010.png: 0.592957 px
+frame_012.png: 0.880691 px
+frame_013.png: 0.601947 px
+frame_014.png: 0.493584 px
+frame_015.png: 0.578756 px
+frame_016.png: 0.455694 px
+frame_017.png: 0.590295 px
+frame_018.png: 0.504139 px
+frame_019.png: 0.325126 px
+frame_020.png: 0.909418 px
+frame_021.png: 0.340761 px
+frame_022.png: 0.527969 px
+frame_023.png: 0.736168 px
+frame_024.png: 0.869023 px
+frame_025.png: 0.240653 px
+frame_026.png: 0.424736 px
+frame_027.png: 0.894964 px
+frame_028.png: 1.302484 px
+frame_029.png: 1.141971 px
+frame_030.png: 0.978320 px
+frame_031.png: 0.572490 px
+frame_032.png: 0.614592 px
+frame_033.png: 1.176036 px
+frame_034.png: 0.958362 px
+frame_035.png: 0.873818 px
+frame_036.png: 0.930978 px
+frame_037.png: 0.964498 px
+frame_038.png: 0.728533 px
+frame_039.png: 0.513135 px
+frame_040.png: 0.671387 px
+frame_041.png: 1.289507 px
+frame_042.png: 2.022043 px
+frame_043.png: 1.523549 px
+frame_044.png: 1.070796 px
+frame_045.png: 0.832980 px
