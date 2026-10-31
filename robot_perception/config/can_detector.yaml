@@ -1,0 +1,84 @@
+# Coke can detector settings.
+#
+# Pixel gates are in full resolution pixels (1280 x 720). The node scales
+# them by `downscale`, so you do not retune them when that changes.
+#
+# Tune the colour thresholds against the debug image. Subscribe to
+# can_detector/debug_image in Foxglove. The node only does the extra work
+# while something subscribes.
+
+can_detector:
+  ros__parameters:
+    image_topic: camera/image_raw
+    # Read camera/image_raw/compressed instead of the raw stream. The raw
+    # frames are 2.76 MB each and the middleware drops most of them: this
+    # camera delivered 1.5 Hz raw against 9.3 Hz compressed. Colour
+    # thresholds survive JPEG without trouble.
+    use_compressed: true
+    camera_info_topic: camera/camera_info
+    detections_topic: can_detections
+    debug_topic: can_detector/debug_image
+    publish_debug: true
+
+    # 2 searches a 640 x 360 frame, which keeps up with the 15 Hz camera.
+    downscale: 2
+
+    # The can measures 110 x 70 mm. label_height is the RED BAND, which is
+    # shorter: the ends are bare aluminium and stay out of the blob.
+    # 0.090 is a starting estimate only. Calibrate it against a measured
+    # distance, because it scales every range by the same factor.
+    label_height: 0.090
+    can_diameter: 0.070
+
+    # The shape gate, measured from real frames rather than derived from
+    # the two sizes above. A cylinder's edges curve away, go dim and drop
+    # out of the red mask, so a blob reads narrower, and so taller, than
+    # the can is. Geometry wants 1.29 here. A real can measured 1.67 to
+    # 1.81 across every threshold tried. Measure yours and set it.
+    # 2.45 was measured on the real can in front of this camera. It is
+    # NOT 1.29, which is what 90/70 mm geometry predicts, because a
+    # cylinder's edges curve away, go dim and drop out of the red mask.
+    # Re-measure with `ros2 run robot_perception can_check` if you change
+    # can type: a slim can reads near 2.45, a standard one near 1.75.
+    target_aspect: 2.45
+
+    # Range comes from apparent size, so its error grows as the square of
+    # the distance: about 4 cm at 1 m, but 37 cm at 3 m. Past roughly 2 m a
+    # can's range is worth less than the risk of a wrong association. The
+    # bearing stays good at every distance.
+    min_range: 0.25
+    max_range: 2.5
+
+    # Red wraps the hue circle. The mask is 0..hue_low_max OR
+    # hue_high_min..179. Raise saturation_min and value_min first when the
+    # mask picks up walls or shadows.
+    hue_low_max: 10
+    hue_high_min: 170
+    saturation_min: 120
+    # 45, not 60. The dimmest 5% of a real can's pixels measured 68 at 1 m,
+    # only 8 above a gate of 60. Those edge pixels drop below it further
+    # away, the blob shrinks, and the range then reads long.
+    value_min: 45
+
+    blur_kernel: 5
+    open_kernel: 3
+    # Wide, because the white script across the label cuts the red band in
+    # two. Without this, one can arrives as several thin blobs.
+    close_kernel: 9
+
+    min_height_px: 24
+    min_area_px: 480
+    edge_margin_px: 4
+
+    # Tighter now that the target is measured and not a guess.
+    aspect_tolerance: 0.35
+    # 0.65 separates a coke can from other red objects. A real can
+    # measured 0.80. An orange and yellow can in the same frame measured
+    # 0.54, because its yellow half stays out of the red mask. Hue cannot
+    # tell them apart: both had a median hue of 6.
+    # 0.50, not 0.65. The white Coca-Cola script cuts across the label
+    # and leaves the blob patchy even after the morphological close.
+    fill_min: 0.50
+
+    max_detections: 8
+    report_period: 5.0

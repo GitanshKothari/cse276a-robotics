@@ -14,6 +14,7 @@ endif()
 
 # Find required ROS2 packages
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -52,6 +53,7 @@ add_executable(robot_vision_camera_node
 
 # Target dependencies
 ament_target_dependencies(robot_vision_camera_node
+  ament_index_cpp
   rclcpp
   sensor_msgs
   std_msgs

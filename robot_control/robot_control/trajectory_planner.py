@@ -3,7 +3,8 @@ import math
 from .config import (
     STOP_PAUSE,
     FORWARD_CMD, FORWARD_SPEED,
-    LEFT_CMD, LEFT_90_S, RIGHT_CMD, RIGHT_90_S,
+    LEFT_CMD, LEFT_TURN_LAG, LEFT_TURN_RATE,
+    RIGHT_CMD, RIGHT_TURN_LAG, RIGHT_TURN_RATE,
 )
 
 
@@ -41,15 +42,17 @@ def split_long_turn(angle_deg):
 
 
 # add a stop command and then a turn command. speed and time is determined by the angle and direction (left vs right).
+# Every turn starts from rest, so each one pays the startup lag once. Add
+# the lag, then time only the sweep itself.
 def add_turn(moves, angle_deg):
     if angle_deg > 0.0:
         left = -LEFT_CMD
         right = LEFT_CMD
-        seconds = LEFT_90_S * (angle_deg / 90.0)
+        seconds = LEFT_TURN_LAG + angle_deg / LEFT_TURN_RATE
     else:
         left = RIGHT_CMD
         right = -RIGHT_CMD
-        seconds = RIGHT_90_S * (abs(angle_deg) / 90.0)
+        seconds = RIGHT_TURN_LAG + abs(angle_deg) / RIGHT_TURN_RATE
     moves.append((STOP_PAUSE, 0.0, 0.0))
     moves.append((seconds, left, right))
 

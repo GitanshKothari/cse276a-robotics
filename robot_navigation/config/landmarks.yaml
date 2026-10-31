@@ -1,0 +1,113 @@
+# AprilTag landmark map for HW2.
+#
+# Measure these against the same world origin the route uses: x forward,
+# y left, z up, with the rover starting at (0, 0) facing +x.
+#
+#   x, y, z      centre of the tag, metres
+#   normal_yaw   world direction the printed face looks towards, degrees
+#                (180 = the face looks back along -x)
+#   tilt         optional lean of the face, degrees, + is tipped upwards
+#   size         optional per-tag edge length, overrides tag_size
+#
+# Coverage, swept over the planned route with the rover's own calibration
+# (rectified fx 637.0, so a 90.3 x 59.0 degree field of view), a 4 m range
+# limit and a 65 degree limit on how obliquely a tag may be viewed:
+#
+#   no tag in view    0.0%
+#   exactly one tag  15.4%
+#   two or more      84.6%
+#   mean in view      2.47
+#   every waypoint sees 2 or 3 tags
+#
+# Tags 8 to 10 are optional. Place the first eight and the coverage falls
+# to 75.9% with two or more, a mean of 1.83, and one short blind stretch
+# during the closing turn at the origin. Every waypoint still sees two.
+# Tags the map lists but the room does not hold are simply never detected,
+# so an eight tag room works against this file unchanged.
+#
+# Re-check after moving any tag, and pass the camera config, or the tool
+# falls back on a built-in calibration that is not this camera:
+#   ros2 run robot_navigation check_coverage <this file> \
+#     --camera-config <share>/robot_vision_camera/config/camera_parameter.yaml
+
+tag_size: 0.165
+
+landmarks:
+  # East wall, facing back along -x. Covers the outbound leg to (1, 0).
+  # Tag 1 sits at y = 0.90, not 1.20: at 1.20 it fell just outside the
+  # right edge of the field of view from waypoint (1, 0), which left that
+  # waypoint with one tag and so with no way to fix its heading.
+  # The 0.90 m between tags 0 and 1 is the unit the distance report uses,
+  # so keep trajectory_logger's distance_unit in step with it.
+  - {id: 0, x: 2.20, y: 0.00, z: 0.25, normal_yaw: 180}
+  - {id: 1, x: 2.20, y: 0.90, z: 0.25, normal_yaw: 180}
+
+  # North wall, facing -y. Covers the leg up to (1, 2).
+  - {id: 2, x: 0.00, y: 2.80, z: 0.25, normal_yaw: 270}
+  - {id: 3, x: 1.20, y: 2.80, z: 0.25, normal_yaw: 270}
+
+  # West wall, facing +x. Covers the diagonal back to the origin and the
+  # final heading, both of which point away from the east wall.
+  - {id: 4, x: -0.80, y: 0.40, z: 0.25, normal_yaw: 0}
+  - {id: 5, x: -0.80, y: 2.00, z: 0.25, normal_yaw: 0}
+
+  # South wall, facing +y. Seen over the rover's start and finish pose.
+  - {id: 6, x: 0.20, y: -0.80, z: 0.25, normal_yaw: 90}
+  - {id: 7, x: 2.00, y: -0.80, z: 0.25, normal_yaw: 90}
+
+  # Optional. These three lift the mean from 1.83 to 2.47 and remove the
+  # last blind stretch. Tag 10 is the one that does that: it covers the
+  # south-west heading the rover sweeps through as it turns to finish.
+  - {id: 8, x: 2.20, y: 1.90, z: 0.25, normal_yaw: 180}
+  - {id: 9, x: -0.80, y: 1.20, z: 0.25, normal_yaw: 0}
+  - {id: 10, x: -0.60, y: -0.80, z: 0.25, normal_yaw: 60}
+
+# Coke cans, the custom landmark option. A can is a cylinder standing on
+# the floor: it has no face and no id, so only its ground position is
+# listed. Give each one an id anyway, so the logs can name a match.
+#
+# These sit at the same places as the tags, which is not a coincidence:
+# swept over the route with a 2.4 m range limit this layout leaves no
+# blind pose, 89.8% of it sees two or more cans, the mean is 2.62, and
+# every waypoint sees three or four. Cans beat the tags on coverage here
+# because a cylinder has no normal, so it is never rejected for being
+# viewed too obliquely.
+#
+# TWO cans must be in view, not one. A can gives range and bearing but no
+# orientation, so a single can cannot fix the heading.
+#
+# The closest pair is 0.80 m apart. Keep every pair above about 0.70 m, or
+# the filter cannot tell which can it is looking at.
+
+
+# Coke cans, the custom landmark option, laid out for SIX cans.
+#
+# These are NOT the tag positions. A tag hangs on a wall and is readable to
+# 4 m. A can is only usable to about 2.4 m, because its range comes from
+# apparent size. So cans belong near the path, not at the edge of the room.
+# Reusing the tag spots for six cans leaves the rover blind 27% of the
+# route. These spots, chosen for six, leave it blind 4.1%.
+#
+# Coverage over the route: 4.1% blind, 68.0% sees two or more, mean 1.67,
+# and all three waypoints see two. The waypoints were weighted deliberately
+# in the search. Overall coverage is slightly worse for it (68% against
+# 75%), but a waypoint is where the rover must stop and fix its heading,
+# and one can cannot do that.
+#
+# TWO cans must be in view, not one. A can gives range and bearing but no
+# orientation, so a single can leaves the heading free.
+#
+# Every pair is at least 0.72 m apart, and every can is at least 0.40 m
+# clear of the driven path. Hold both when you move anything.
+#
+# WITH MORE CANS: eight placed well give 0.3% blind and 85.5% two or more.
+# The detector keys on a red cylinder, not on the brand, so any identical
+# red cans will do. Two more would help a lot.
+
+cans:
+  - {id: 0, x: 0.20, y: -0.40}
+  - {id: 1, x: -0.40, y: -0.80}
+  - {id: 2, x: 1.80, y: 0.60}
+  - {id: 3, x: 2.40, y: 1.20}
+  - {id: 4, x: 0.20, y: 1.60}
+  - {id: 5, x: 0.40, y: 2.40}

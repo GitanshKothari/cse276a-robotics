@@ -1,0 +1,126 @@
+# Parameters for the HW2 closed-loop run. map_path is filled in by the
+# launch file so it resolves to the installed share directory.
+
+landmark_localizer:
+  ros__parameters:
+    world_frame: world
+    base_frame: base_link
+    camera_frame: camera_frame
+
+    # Measure these on the rover: the camera's optical centre in base_link
+    # metres, then how the camera body is aimed. Positive pitch tips down.
+    camera_x: 0.10
+    camera_y: 0.0
+    camera_z: 0.18
+    camera_yaw_deg: 0.0
+    camera_pitch_deg: 0.0
+    camera_roll_deg: 0.0
+
+    initial_pose: [0.0, 0.0, 0.0]
+    initial_std: [0.03, 0.03, 0.05]
+    predict_rate: 20.0
+
+    # Dead-reckoning noise. The rover has no encoders, so the prediction
+    # runs on the commanded twist and these have to cover wheel slip,
+    # battery sag and the gap between asking for a speed and getting it.
+    # Raise alpha_v / alpha_w if the estimate lurches when a tag reappears
+    # after a blind stretch - that means the filter trusted the motion
+    # model more than it had earned.
+    alpha_v: 0.25
+    beta_v: 0.02
+    alpha_w: 0.25
+    beta_w: 0.05
+    command_timeout: 0.15
+
+    # Detection quality gates.
+    pixel_sigma: 1.0
+    min_decision_margin: 30.0
+    max_range: 4.0
+    max_reprojection_error: 3.0
+    range_floor: 0.005
+    bearing_floor_deg: 0.3
+    mahalanobis_gate: 16.0
+
+    # A lone tag's orientation is the only heading cue when one tag is all
+    # that is visible, but it is a weak one, so it is scaled up by an order
+    # of magnitude and dropped entirely when the two planar solutions tie.
+    use_single_tag_yaw: true
+    yaw_sigma_scale: 10.0
+    ambiguity_threshold: 0.7
+    yaw_floor_deg: 1.0
+    yaw_gate: 9.0
+
+    # The IMU yaw is anchored to the start heading and then tracks changes.
+    # Set false if the rover's IMU drifts badly over a run.
+    use_imu_heading: true
+    imu_yaw_sigma_deg: 8.0
+
+    # Coke cans. Set use_cans false to fall back on tags alone.
+    #
+    # can_pixel_sigma is three times the tag figure because a colour blob
+    # edge is far blurrier than a tag corner, and the label is 90 mm
+    # against the tag's 165 mm. Both make the range worse: about 5 cm at
+    # 1 m but 21 cm at 2 m, against 1 cm and 4 cm for a tag. The bearing
+    # holds up much better, 0.27 deg against 0.09, and with three or four
+    # cans in view the bearings carry most of the information.
+    #
+    # can_max_range is 2.4 m, not more: past that the label is under 24 px
+    # tall and the detector drops it anyway.
+    # Set use_tags false for the can-only run. Nothing in the room moves.
+    use_tags: true
+    use_cans: true
+    can_label_height: 0.090
+    can_max_range: 2.4
+    can_pixel_sigma: 3.0
+    can_gate: 9.0
+    # Cans are identical, so a sighting that two cans explain about
+    # equally well is discarded rather than guessed at. The runner-up must
+    # score at least this many times worse before the best is trusted.
+    can_ambiguity_ratio: 3.0
+
+waypoint_controller:
+  ros__parameters:
+    # (0,0,0) -> (1,0,0) -> (1,2,pi) -> (0,0,0)
+    waypoints: [0.0, 0.0, 0.0,
+                1.0, 0.0, 0.0,
+                1.0, 2.0, 3.14159265,
+                0.0, 0.0, 0.0]
+    control_rate: 20.0
+
+    k_rho: 0.6
+    k_alpha: 1.6
+    k_beta: 1.4
+
+    max_linear: 0.25
+    max_angular: 0.9
+    # Smallest wheel command that actually breaks static friction. Raise
+    # until the rover reliably starts moving; too high and it will hunt
+    # around the goal instead of settling.
+    min_cmd: 0.10
+
+    position_tolerance: 0.06
+    heading_tolerance_deg: 6.0
+    align_tolerance_deg: 12.0
+    align_exit_deg: 45.0
+    settle_time: 0.4
+
+    blind_slow_after: 1.5
+    blind_stop_after: 5.0
+    blind_speed_scale: 0.5
+    search_angular: 0.5
+    search_sweep: 2.5
+    pose_timeout: 0.5
+    start_delay: 2.0
+
+trajectory_logger:
+  ros__parameters:
+    sample_period: 0.5
+    # One unit for the distance report: the 0.90 m between tag 0 and tag 1
+    # on the east wall. It was 1.20 m until tag 1 moved, so that waypoint
+    # (1, 0) could see two tags instead of one. The assignment lets the unit be any real
+    # landmark-to-landmark distance of at least 0.5 m, and quoting a
+    # spacing that is actually in the map beats inventing a round number.
+    distance_unit: 0.90
+    # Half the rover's track width, used to count turning on the spot as
+    # distance travelled. Measure it; set 0 to report rotation separately.
+    rotation_radius: 0.07

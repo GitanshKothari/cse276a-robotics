@@ -1,0 +1,31 @@
+# Detector settings for the HW2 landmark ring.
+#
+# The images this runs on are rectified by the camera node, which also
+# republishes camera_info with zero distortion and the undistorted
+# intrinsics - apriltag_node reads fx, fy, cx, cy out of P and does not
+# undistort anything itself, so feeding it raw frames would quietly bias
+# every pose.
+
+/**:
+    ros__parameters:
+        image_transport: raw
+        family: 36h11
+        size: 0.165
+        max_hamming: 0
+
+        detector:
+            threads: 4
+            decimate: 2.0
+            blur: 0.0
+            refine: True
+            sharpening: 0.4
+            debug: False
+
+        # The localizer solves its own pose from the corners, so this only
+        # affects the tf apriltag_node broadcasts for visualisation.
+        pose_estimation_method: "pnp"
+
+        tag:
+            ids: [0, 1, 2, 3, 4, 5, 6, 7]
+            frames: [tag_0, tag_1, tag_2, tag_3, tag_4, tag_5, tag_6, tag_7]
+            sizes: [0.165, 0.165, 0.165, 0.165, 0.165, 0.165, 0.165, 0.165]

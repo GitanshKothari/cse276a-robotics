@@ -1,5 +1,7 @@
 #include "robot_vision_camera/robot_vision_camera.h"
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
 RobotVisionCamera::RobotVisionCamera(const std::string & name)
   : Node(name, rclcpp::NodeOptions().use_intra_process_comms(true)), camera_info_loaded_(false)
 {
@@ -35,14 +37,15 @@ void RobotVisionCamera::getROSParams(){
   this->declare_parameter<std::string>("topic_name", "camera/image_raw");
   this->declare_parameter<bool>("image_compress", true);
   this->declare_parameter<bool>("image_rectify", false);
-  this->declare_parameter<std::string>("camera_parameter_path", "/home/ubuntu/ros2_ws/rubikpi_ros2/robot_vision/config/camera_parameter.yaml");
+  this->declare_parameter<std::string>("camera_parameter_path",
+    ament_index_cpp::get_package_share_directory("robot_vision_camera") + "/config/camera_parameter.yaml");
   this->declare_parameter<int>("jpeg_quality", 90);
   
   // Video adjustment parameters
-  this->declare_parameter<double>("brightness", 0.05);
+  this->declare_parameter<double>("brightness", 0.0);
   this->declare_parameter<double>("contrast", 1.0);
-  this->declare_parameter<double>("saturation", 0.2);
-  this->declare_parameter<double>("hue", 0.1);
+  this->declare_parameter<double>("saturation", 1.0);
+  this->declare_parameter<double>("hue", 0.0);
 
   // Get parameter values
   frame_rate = this->get_parameter("frame_rate").as_int();
@@ -236,6 +239,21 @@ void RobotVisionCamera::prepareRemap() {
   cv::Mat newK = getOptimalNewCameraMatrix(K, D, imageSize, 0.0, imageSize, 0);
   cv::initUndistortRectifyMap(K, D, cv::Mat(), newK, imageSize, CV_16SC2, map1, map2);
 
+  // The published frames are undistorted with newK, so the advertised intrinsics
+  // have to describe that image and not the raw one: zero distortion, newK in
+  // both K and P. Consumers that do PnP (apriltag_node reads P) otherwise apply
+  // the raw focal length and re-apply distortion to an already rectified image.
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      camera_info_msg_.k[i * 3 + j] = newK.at<double>(i, j);
+      camera_info_msg_.p[i * 4 + j] = newK.at<double>(i, j);
+    }
+    camera_info_msg_.p[i * 4 + 3] = 0.0;
+  }
+  camera_info_msg_.d.assign(5, 0.0);
+  std::fill(camera_info_msg_.r.begin(), camera_info_msg_.r.end(), 0.0);
+  camera_info_msg_.r[0] = camera_info_msg_.r[4] = camera_info_msg_.r[8] = 1.0;
+
   RCLCPP_INFO(this->get_logger(),
     "Rectify ready. size=%dx%d, D=%dx%d, K=(%g,%g,%g | %g,%g,%g | %g,%g,%g)",
     imageSize.width, imageSize.height, D.rows, D.cols,
@@ -419,7 +437,11 @@ GstFlowReturn RobotVisionCamera::processData(GstElement * sink, RobotVisionCamer
     cam_msg->header.frame_id = "camera_frame";
     cam_msg->height = frame_rgb.rows;
     cam_msg->width = frame_rgb.cols;
-    cam_msg->encoding = "rgb8";
+    // GStreamer filled this with output_format, which is BGR, so the
+    // matrix name above is a misnomer. Labelling it rgb8 made cv_bridge
+    // swap R and B for every subscriber, and red arrived as blue. The
+    // JPEG below was always right: cv::imencode expects BGR and got it.
+    cam_msg->encoding = (node->output_format == "RGB") ? "rgb8" : "bgr8";
     cam_msg->is_bigendian = false;
     cam_msg->step = static_cast<sensor_msgs::msg::Image::_step_type>(frame_rgb.step);
     cam_msg->data.assign(frame_rgb.datastart, frame_rgb.dataend);
