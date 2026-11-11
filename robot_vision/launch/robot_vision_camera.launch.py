@@ -87,9 +87,12 @@ def generate_launch_description():
             'service_whitelist': ['.*'],
             'client_topic_whitelist': ['.*'],
             'min_qos_depth': 1,
-            'max_qos_depth': 25,
+            'max_qos_depth': 1,
             'num_threads': 0,
             'use_compression': False,
+            'send_buffer_limit': 1000000,
+            'message_backlog_size': 2,
+            'best_effort_qos_topic_whitelist': ['/camera/.*'],
         }]
     )
 

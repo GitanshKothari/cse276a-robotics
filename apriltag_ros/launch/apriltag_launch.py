@@ -35,7 +35,8 @@ def generate_launch_description():
         LaunchConfiguration('config_file')
     ])
     
-    # AprilTag node
+    # AprilTag node. Subscribe through the compressed transport
+    # because the camera only streams the compressed image reliably.
     apriltag_node = Node(
         package='apriltag_ros',
         executable='apriltag_node',
@@ -44,7 +45,10 @@ def generate_launch_description():
             ('image_rect', LaunchConfiguration('image_topic')),
             ('camera_info', LaunchConfiguration('camera_info_topic'))
         ],
-        parameters=[config_file_path],
+        parameters=[
+            config_file_path,
+            {'image_transport': 'compressed'},
+        ],
         output='screen'
     )
     
