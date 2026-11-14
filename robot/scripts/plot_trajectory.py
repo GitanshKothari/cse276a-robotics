@@ -8,28 +8,34 @@
 #
 #   1. Arena bound: a dot that falls far outside the waypoint and tag
 #      bounding box is noise.
-#   2. Motion bound: a dot that moves faster than MAX_SPEED metres per
-#      second from the previous accepted dot is noise.
-#
-# One dot per sample interval (default 0.5 s).
+#   2. Neighbour bound (two-sided): a dot that is far from the median of
+#      the NEIGHBOURS dots before and after it is noise. The allowed
+#      distance is BASE_DEV plus MAX_SPEED times the time gap between
+#      the dot and its neighbours, so sparse samples are not punished.
+#      The filter repeats until no more dots are dropped.
 #
 # Usage:
 #   python3 plot_trajectory.py [pose_csv] [png_path] [interval_s]
+#                              [--show-outliers]
 
 import sys
 import csv
+import statistics
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import yaml
 
-CSV = sys.argv[1] if len(sys.argv) > 1 else "/tmp/pose_log.csv"
-PNG = sys.argv[2] if len(sys.argv) > 2 else "/tmp/trajectory_plot.png"
-INTERVAL = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
+SHOW_OUTLIERS = "--show-outliers" in sys.argv
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+CSV = ARGS[0] if len(ARGS) > 0 else "/tmp/pose_log.csv"
+PNG = ARGS[1] if len(ARGS) > 1 else "/tmp/trajectory_plot.png"
+INTERVAL = float(ARGS[2]) if len(ARGS) > 2 else 0.5
 
 ARENA_MARGIN = 0.60        # metres beyond waypoint/tag bounds
 MAX_SPEED = 0.35           # m/s cap for a plausible step
-JUMP_MARGIN = 0.15         # metres of grace on top of MAX_SPEED * dt
+BASE_DEV = 0.22            # metres allowed from the neighbour median
+NEIGHBOURS = 3             # dots on each side used for the median
 
 CONFIG_DIR = Path(
     "/home/ubuntu/ros2_ws/src/cse276a-robotics/robot/config"
@@ -69,19 +75,39 @@ with open(CSV) as f:
 # Pass 1: arena clip.
 clean = [(t, x, y) for (t, x, y) in rows if in_arena(x, y)]
 
-# Pass 2: motion clip. A dot that is too far from the previous accepted
-# dot (based on elapsed time) is treated as an ambiguity flip.
-filtered = []
-for (t, x, y) in clean:
-    if not filtered:
-        filtered.append((t, x, y))
-        continue
-    pt, px, py = filtered[-1]
-    dt = max(1e-3, t - pt)
-    jump = ((x - px) ** 2 + (y - py) ** 2) ** 0.5
-    if jump > MAX_SPEED * dt + JUMP_MARGIN:
-        continue
-    filtered.append((t, x, y))
+# Pass 2: neighbour clip. Compare each dot with the median of the dots
+# before and after it. Unlike a check against only the previous dot, a
+# single spike cannot pull the reference away, and a good dot after a
+# spike is not dropped.
+
+
+def neighbour_clip(pts):
+    kept = []
+    for i, (t, x, y) in enumerate(pts):
+        lo = max(0, i - NEIGHBOURS)
+        nb = [p for j, p in enumerate(pts[lo:i + NEIGHBOURS + 1], lo)
+              if j != i]
+        if len(nb) < 2:
+            kept.append((t, x, y))
+            continue
+        tm = statistics.median(p[0] for p in nb)
+        mx = statistics.median(p[1] for p in nb)
+        my = statistics.median(p[2] for p in nb)
+        dev = ((x - mx) ** 2 + (y - my) ** 2) ** 0.5
+        if dev <= BASE_DEV + MAX_SPEED * abs(t - tm):
+            kept.append((t, x, y))
+    return kept
+
+
+filtered = clean
+while True:
+    nxt = neighbour_clip(filtered)
+    if len(nxt) == len(filtered):
+        break
+    filtered = nxt
+
+kept_set = set(filtered)
+outliers = [r for r in rows if r not in kept_set]
 
 ts = [r[0] for r in filtered]
 xs = [r[1] for r in filtered]
@@ -99,9 +125,14 @@ for t, x, y in zip(ts, xs, ys):
 # ---- draw ----
 fig, ax = plt.subplots(figsize=(8, 8))
 
-# Full trajectory (filtered) as a faint line
-ax.plot(xs, ys, color="steelblue", alpha=0.4,
-        linewidth=1.0, label="path")
+# Path line through the kept dots
+ax.plot(xs, ys, color="steelblue", alpha=0.6,
+        linewidth=1.5, label="path")
+
+if SHOW_OUTLIERS and outliers:
+    ax.scatter([r[1] for r in outliers], [r[2] for r in outliers],
+               s=22, marker="x", color="grey", alpha=0.5,
+               label=f"rejected ({len(outliers)})")
 
 # Sampled dots
 ax.scatter(sx, sy, s=28, color="steelblue",
@@ -137,7 +168,7 @@ ax.set_xlabel("x (m)")
 ax.set_ylabel("y (m)")
 ax.set_title(
     f"Robot 2D trajectory ({len(sx)} samples, "
-    f"{ts[-1] if ts else 0:.1f} s)"
+    f"{ts[-1] if ts else 0:.1f} s, {len(outliers)} outliers removed)"
 )
 ax.set_aspect("equal", adjustable="datalim")
 ax.grid(alpha=0.3)

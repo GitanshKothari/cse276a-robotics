@@ -1,0 +1,25 @@
+/**:
+    ros__parameters:
+        image_transport: raw
+        family: 36h11
+        size: 0.168
+        max_hamming: 1
+
+        detector:
+            threads: 4
+            decimate: 2.0
+            blur: 0.0
+            refine: True
+            sharpening: 0.4
+            debug: False
+
+        pose_estimation_method: "pnp"
+
+        # IDs from hw3_ground_truth.csv
+        tag:
+            ids: [0, 1, 3, 4, 5, 7, 8, 9]
+            frames: ["tag36h11:0", "tag36h11:1", "tag36h11:3", "tag36h11:4",
+                     "tag36h11:5", "tag36h11:7", "tag36h11:8", "tag36h11:9"]
+            # 0.168 gives the correct map scale (offline replay of runs
+            # square_20261111_140845 and square_20261111_144406).
+            sizes: [0.168, 0.168, 0.168, 0.168, 0.168, 0.168, 0.168, 0.168]

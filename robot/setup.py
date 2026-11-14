@@ -32,9 +32,10 @@ setup(
     entry_points={
         "console_scripts": [
             "navigator  = robot.navigator:main",
-            "motor_node = robot.motors:main",
+            "motor_node = robot.motor_control:main",
             "keyboard   = robot.keyboard:main",
             "calibrate  = robot.calibrate:main",
+            "hw3_run    = robot.hw3_run:main",
         ],
     },
 )
