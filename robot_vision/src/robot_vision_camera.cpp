@@ -233,7 +233,9 @@ void RobotVisionCamera::prepareRemap() {
   cv::Size imageSize(width, height);
 
   // Build undistortion maps
-  cv::Mat newK = getOptimalNewCameraMatrix(K, D, imageSize, 0.0, imageSize, 0);
+  // Keep the same camera matrix for the rectified image. The published
+  // camera_info (K and P) then stays correct for apriltag_ros.
+  cv::Mat newK = K.clone();
   cv::initUndistortRectifyMap(K, D, cv::Mat(), newK, imageSize, CV_16SC2, map1, map2);
 
   RCLCPP_INFO(this->get_logger(),

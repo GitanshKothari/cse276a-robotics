@@ -1,11 +1,10 @@
-
 import math
 
 
 FORWARD_CMD = 0.20
-FORWARD_SPEED = 0.195         # metres per second
+FORWARD_SPEED = 0.230         # metres per second (last measured forward cal)
 LEFT_CMD = 0.35
-LEFT_90_S = 0.85              # seconds to pivot 90 degrees LEFT
+LEFT_90_S = 0.82            # seconds to pivot 90 degrees LEFT (turn test: 4 turns gave 410 deg at 0.93)
 RIGHT_CMD = 0.30
 RIGHT_90_S = 1.00             # seconds to pivot 90 degrees RIGHT
 

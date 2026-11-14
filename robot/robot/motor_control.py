@@ -71,6 +71,7 @@ class MotorControllerNode(Node):
         self.last_command_time = time.time()
         self.timeout_duration = 0.15  # 0.15 second timeout
         self.command_lock = threading.Lock()  # thread safety for command updates
+        self.serial_lock = threading.Lock()   # one serial write at a time
         self.timeout_active = False  # flag to track if we're in timeout state
         
         # start threads
@@ -114,14 +115,26 @@ class MotorControllerNode(Node):
             
             # update command with thread safety
             with self.command_lock:
+                changed = (L != self.motor_command["L"]
+                           or R != self.motor_command["R"])
                 self.motor_command = {"T": 1, "L": L, "R": R}
                 self.last_command_time = time.time()
-                
+
                 # log if we're recovering from timeout
                 if self.timeout_active:
                     self.get_logger().info('Motor commands resumed - exiting safety timeout')
                     self.timeout_active = False
-            
+
+            # Send a changed command immediately. The 20 Hz loop alone delays
+            # the start and the stop of a pulse by up to 0.05 s.
+            if changed and self.robot:
+                try:
+                    command_str = json.dumps({"T": 1, "L": float(L), "R": float(R)}) + '\n'
+                    with self.serial_lock:
+                        self.robot.write(command_str.encode('utf-8'))
+                except Exception as e:
+                    self.get_logger().error(f'Motor command serial write error: {str(e)}')
+
             self.get_logger().debug(f'Motor command received: L={L:.2f}, R={R:.2f}')
             
         except Exception as e:
@@ -159,8 +172,9 @@ class MotorControllerNode(Node):
                         current_command = self.motor_command.copy()
                     
                     command_str = json.dumps(current_command) + '\n'
-                    self.robot.write(command_str.encode('utf-8'))
-                    
+                    with self.serial_lock:
+                        self.robot.write(command_str.encode('utf-8'))
+
                 except Exception as e:
                     self.get_logger().error(f'Motor command serial write error: {str(e)}')
                     self.init_serial()
@@ -172,7 +186,8 @@ class MotorControllerNode(Node):
             if self.robot:
                 try:
                     command_str = json.dumps(self.imu_request_command) + '\n'
-                    self.robot.write(command_str.encode('utf-8'))
+                    with self.serial_lock:
+                        self.robot.write(command_str.encode('utf-8'))
                     
                 except Exception as e:
                     self.get_logger().error(f'IMU request serial write error: {str(e)}')
